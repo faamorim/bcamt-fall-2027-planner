@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Math Conference Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+[hidden]{display:none!important}
+body{margin:0}
+/* Layout: single phone-first column on graph paper; sticky filter bar, sticky time-slot rulers, cards as index slips */
+:root{
+  --paper:#eef2f6; --grid:#dbe3ec; --card:#ffffff; --ink:#152238; --muted:#5b6a80; --line:#cdd6e2;
+  --accent:#1f5fbf; --accent-soft:#e2ecfb; --pick:#d9480f; --pick-soft:#fdebe2; --shade:#7d8796;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --bar-h:0px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0f1724; --grid:#172233; --card:#172234; --ink:#e6edf7; --muted:#9aa9be; --line:#2a3850;
+  --accent:#7fb0ff; --accent-soft:#1d3050; --pick:#ff8a50; --pick-soft:#3a2418; --shade:#8e9bb0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0f1724; --grid:#172233; --card:#172234; --ink:#e6edf7; --muted:#9aa9be; --line:#2a3850;
+  --accent:#7fb0ff; --accent-soft:#1d3050; --pick:#ff8a50; --pick-soft:#3a2418; --shade:#8e9bb0; color-scheme:dark}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;background-attachment:fixed}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+header h1{font-family:var(--f-display);font-weight:800;font-size:clamp(1.7rem,6vw,2.3rem);line-height:1.05;margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:.4rem 0 0;color:var(--muted);font-size:.9rem}
+.note{display:inline-block;margin-top:.6rem;font-size:.8rem;color:var(--muted);border:1px dashed var(--line);border-radius:6px;padding:.25rem .5rem;background:var(--card)}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);margin:14px calc(-1 * max(16px,env(safe-area-inset-left,0px))) 0;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--card);padding:2px}
+.seg button{border:0;background:transparent;color:var(--muted);font:700 .82rem var(--f-body);padding:.35rem .8rem;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.seg .count{font-family:var(--f-mono);font-size:.72rem;margin-left:.3rem;opacity:.8}
+.search{flex:1 1 90px;min-width:0;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.45rem .85rem;font:inherit;font-size:.9rem}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:.3rem .7rem;font:.8rem var(--f-body);cursor:pointer;display:inline-flex;gap:.35rem;align-items:center}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.chip .k{font-family:var(--f-mono);font-size:.7rem;font-weight:700}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.spacer{flex:1}
+.row.nowrap{flex-wrap:nowrap}
+.toprow .seg button{padding:.35rem .65rem;font-size:.8rem;white-space:nowrap}
+.gseg{flex:none}
+.gseg button{padding:.35rem .5rem;font-size:.78rem;font-family:var(--f-mono)}
+.morebtn{flex:none;position:relative;width:36px;height:34px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;font:700 1.1rem var(--f-body);cursor:pointer;line-height:1}
+.morebtn[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:999px;background:var(--accent);color:var(--card);font:700 .65rem/16px var(--f-mono);text-align:center;padding:0 3px}
+.bar{gap:7px;padding-top:8px;padding-bottom:8px}
+
+.linkbtn{border:0;background:none;color:var(--accent);font:700 .8rem var(--f-body);cursor:pointer;padding:.3rem .2rem}
+
+.slot{margin-top:18px}
+.ruler{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--bar-h));z-index:10;background:var(--paper);display:flex;align-items:baseline;gap:.6rem;padding:8px 0 6px;border-bottom:2px solid var(--ink)}
+.ruler .t{font-family:var(--f-mono);font-weight:700;font-size:1rem;font-variant-numeric:tabular-nums}
+.ruler .lab{font-family:var(--f-display);font-weight:600;font-size:.95rem;color:var(--muted)}
+.ruler .n{margin-left:auto;font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.ruler .mine{font-size:.72rem;color:var(--pick);font-weight:700}
+.list{display:flex;flex-direction:column;gap:8px;padding-top:10px}
+.empty{color:var(--muted);font-size:.88rem;padding:10px 2px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-columns:1fr auto;min-width:0}
+.card.picked{border-color:var(--pick);box-shadow:inset 3px 0 0 var(--pick)}
+.head{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;padding:11px 4px 11px 13px;cursor:pointer;min-width:0}
+.head:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
+.title{font-weight:700;font-size:.98rem;line-height:1.3;text-wrap:pretty}
+.who{color:var(--muted);font-size:.85rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.room{font-family:var(--f-mono);font-size:.72rem;font-weight:700;border:1px solid var(--line);border-radius:4px;padding:0 .35rem;color:var(--ink)}
+.tag{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tag.hybrid{color:var(--accent)}
+.pips{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.pips span{font-family:var(--f-mono);font-size:.62rem;font-weight:700;width:1.9rem;text-align:center;padding:1px 0;color:var(--muted);border-left:1px solid var(--line)}
+.pips span:first-child{border-left:0}
+.pips span.on{background:var(--shade);color:var(--card)}
+.desc{grid-column:1 / -1;padding:0 13px 13px;font-size:.9rem;color:var(--ink);white-space:pre-line;max-width:65ch}
+.desc[hidden]{display:none}
+.chev{font-size:.75rem;color:var(--muted)}
+.star{all:unset;cursor:pointer;width:44px;display:flex;align-items:flex-start;justify-content:center;padding-top:9px;font-size:1.3rem;color:var(--line);line-height:1}
+.star:hover{color:var(--muted)}
+.star[aria-pressed="true"]{color:var(--pick)}
+.star:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:8px}
+.lunch{font-family:var(--f-display);font-weight:600;color:var(--muted);padding:10px 2px}
+
+/* My Day */
+.day .slotcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 13px;display:flex;flex-direction:column;gap:4px}
+.day .slotcard.set{border-color:var(--pick);box-shadow:inset 3px 0 0 var(--pick)}
+.day .big{font-family:var(--f-mono);font-weight:700;font-size:1.25rem;color:var(--pick)}
+.day .row2{display:flex;gap:.6rem;align-items:baseline;flex-wrap:wrap}
+.day .todo{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Math Conference Planner</h1>
+    <p>In-person sessions · 49 sessions across four time blocks</p>
+    <span class="note">Times and rooms may still change (schedule updated Oct 20).</span>
+  </header>
+
+  <div class="bar" id="bar">
+    <div class="row nowrap toprow">
+      <div class="seg" role="group" aria-label="Page">
+        <button id="tab-all" aria-pressed="true" aria-label="All sessions">All</button>
+        <button id="tab-day" aria-pressed="false">My Day<span class="count" id="daycount"></span></button>
+      </div>
+      <span class="spacer"></span>
+      <div class="seg" role="group" aria-label="Card view" id="viewseg">
+        <button id="v-compact" aria-pressed="true">Compact</button>
+        <button id="v-full" aria-pressed="false">Full</button>
+      </div>
+    </div>
+    <div class="row nowrap" id="filters">
+      <input class="search" id="q" type="search" placeholder="Search…" aria-label="Search titles, speakers, rooms">
+      <div class="seg gseg" role="group" aria-label="Grades">
+        <button data-g="Prim" aria-pressed="false" title="Primary">Prim</button>
+        <button data-g="Int" aria-pressed="false" title="Intermediate">Int</button>
+        <button data-g="Mid" aria-pressed="false" title="Middle">Mid</button>
+        <button data-g="Sec" aria-pressed="false" title="Secondary">Sec</button>
+      </div>
+      <button class="morebtn" id="more-btn" aria-expanded="false" aria-controls="more" aria-label="More filters">⋯<span class="badge" id="more-n" hidden></span></button>
+    </div>
+    <div class="row" id="more" hidden>
+      <button class="chip" id="f-hybrid" aria-pressed="false">Hybrid only</button>
+      <button class="chip" id="f-noex" aria-pressed="false">Hide exhibitor</button>
+      <span class="spacer"></span>
+      <button class="linkbtn" id="clear" hidden>Clear all</button>
+    </div>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<script>
+const DATA = [{"slot": "8:30 am to 9:30 am", "title": "Welcome and Opening Keynote - From Perseverance to Productive Struggle: States vs. Traits", "speakers": "Peter Liljedahl", "room": "Auditorium", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": [], "desc": "In recent years, conversations in math education have centered on perseverance, positive dispositions, patience, grit, frustration, productive struggle, interest, engagement, and mastery experiences. These qualities reflect the very best of what we hope to see in students. In this session, I delve into some of these qualities—and more—examining how they connect, how they differ, and the kinds of learning environments that allow them to thrive."}, {"slot": "9:45 am to 11 am", "title": "A Step Backwards to Gain Two Steps Forward", "speakers": "Lucas Guillen", "room": "B211", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": [], "desc": "Build critical thinking and communication skills by constructing an object to fit a set of properties rather than describing the properties of a given object."}, {"slot": "9:45 am to 11 am", "title": "A unifying theme for K-12 mathematics instruction. Seeing structure and building meaning. Understanding and teaching with links that work.", "speakers": "Calvin Leung", "room": "E101", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": ["Exhibitor"], "desc": "From K-12, students make their way through a series of disjointed experiences causing a disconnect between students and math; resulting in weak numeracy and understanding of “what math means.\" An easy, common theme in all classrooms K-12 can make meaning and get students to understand the procedures and algorithms we teach, integrating many concepts from one grade to the next. By implementing this easy thread through our mathematics instruction, across each grade and between grades, both teachers and students will have a greater understanding of how things are related and make concepts easier for teachers to explain and students to learn."}, {"slot": "9:45 am to 11 am", "title": "Bringing Financial Literacy to Life in the Math Classroom", "speakers": "David Delisle", "room": "B200", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": [], "desc": "Students can calculate percentages and still make poor money choices. This practical session gives math teachers a powerful way to teach financial literacy through short, conversation-based lessons that connect spending, saving, investing and giving to real choices, habits, and long-term thinking. Participants will leave with ready-to-use prompts, a flexible lesson structure, and simple strategies they can bring straight into the classroom."}, {"slot": "9:45 am to 11 am", "title": "Finding Their Way: How Immigrant Parents Navigate Unfamiliar School Systems", "speakers": "Maliheh Manzouri", "room": "E102", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": [], "desc": "This session examines how immigrant parents attempt to communicate with their children’s math teachers within a new education system. It highlights the importance of mathematics in some cultures and how this shapes parents’ strong desire to connect. The session explores why communication can be difficult, including key challenges and limitations. Through realistic scenarios, participants will discuss parents’ experiences and consider ways to better support effective communication. Prim Int Mid Sec"}, {"slot": "9:45 am to 11 am", "title": "The Power of Silence - Teaching More by Talking Less", "speakers": "Kathleen Jalalpour", "room": "B207", "grades": ["Prim"], "tags": ["Hybrid"], "desc": "Come participate in hands-on investigations that reveal what it truly feels like to learn new number concepts. See how manipulative-based inquiry learning fosters a thinking classroom – with less teacher talk – that empowers students to take charge of their own learning."}, {"slot": "9:45 am to 11 am", "title": "Safe to Struggle: Supporting Every Learner", "speakers": "Canan Güneş, Kelly Davila", "room": "B203", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "What helps students feel ready to engage in mathematical tasks? How can we support students when uncertainty during problem-solving triggers their anxiety rather than their curiosity? Through real classroom situations and collaborative discussions, you will reflect on your own practices and explore teaching moves grounded in principles of trauma-informed pedagogy. This session will provide practical tools to create inclusive and supportive environments where students feel safe to take risks, persevere, and build more positive relationships with mathematics."}, {"slot": "9:45 am to 11 am", "title": "Calendar Quest: Turning Daily Patterns into Powerful Math Thinking", "speakers": "Amanda Younger", "room": "E206", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "Calendar is not just for primary grades! Transform your daily calendar into one of the most powerful parts of your math block. Calendar Quest uses carefully designed patterns that extend across the entire month. Set it up once and enjoy rich mathematical thinking all month long. These organized, evolving patterns spark curiosity, wonder, and sustained thinking. Participants will experience a pattern and explore how it develops over time. All patterns connect to the BC curriculum and are adaptable with a low floor and high ceiling for Grades 1 to 6."}, {"slot": "9:45 am to 11 am", "title": "Using Collaborative Concept Circles and Placemats to Deepen Number Sense and Computational Understanding", "speakers": "Deanna Brajcich", "room": "B209", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "Join Deanna in exploring how concept circles and placemat activities can enrich learning and assessment in the mathematics classroom. Over the past 30 years, Deanna has used these collaborative tabletop strategies in her classroom and in small numeracy support groups to reinforce new concepts and to expand student understanding. These engaging strategies reveal student thinking, uncover misconceptions, and provide valuable opportunities for formative assessment. Through the use of drawing, manipulatives, writing, conversation, money, playdough, and more, students can represent their understanding in a variety of ways. Although this session is for intermediate curriculum standards, Deanna will also share examples using primary standards."}, {"slot": "9:45 am to 11 am", "title": "Inclusion and Math: Shifting Perspectives", "speakers": "Andrew Pirie", "room": "E205", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "As the range of prior knowledge and mathematical proficiency in our classrooms continues to widen, questions of access, participation, and belonging become increasingly important. In this interactive session, teachers will explore how shifting from a focus on memorizing procedures to developing reasoning and communication can make mathematics more inclusive for all students. Together, we’ll consider how rethinking the purpose of school mathematics can open access for more learners and better reflect the diverse ways students engage with mathematical ideas. Prim Int Mid Sec"}, {"slot": "9:45 am to 11 am", "title": "Re-imaging Fractions: Core concepts to support conceptual understanding of operations on fractions", "speakers": "Susan Robinson", "room": "B206", "grades": ["Int", "Mid", "Sec"], "tags": ["Hybrid"], "desc": "What can we do in math class that supports a conceptual understanding of fractions rather than a reliance on procedures? This session will engage teachers with activities that highlight core fraction concepts and operations on fractions, while examining what makes fractions challenging for students. We will look at multiple representations of fractions and teacher moves that encourage students to justify their reasoning and strategize their approaches to comparing and ordering fractions, equivalent fractions and operations on fractions. Materials will be provided for in-person participation; online attendees will need graph paper and access to Cuisenaire rods (link to virtual Cuisenaire rods will be provided at the start of the workshop)."}, {"slot": "9:45 am to 11 am", "title": "Fun Friday Math: Games, Puzzles, and Inquiries Student Can't Get Enough Of", "speakers": "Josh Angiola", "room": "E106", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "What if math class was the highlight of the week? In this interactive session, you’ll experience “Fun Friday” math in action through engaging games, brain-bending puzzles, and rich mathematical inquiries that get students thinking, talking, and wanting more. Designed for grades 4–12 (and loved by adults alike!), these low-prep activities build logic, reasoning, patterning, and generalizing skills through play-based problem-solving—while reminding us that joy and play belong in serious mathematics."}, {"slot": "9:45 am to 11 am", "title": "What is Extending?", "speakers": "Phil Stringer", "room": "E108", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "Applying the BC proficiency scale to middle and high school math can feel sometimes feel abstract. How do we clearly distinguish between a \"Developing\" and \"Proficient\" student? What does \"sophisticated\" versus \"initial\" understanding look like in Mathematics 8 or Pre-Calculus 11? In this interactive session, Grade 6-12 math teachers will dive deep into all four levels: Emerging, Developing, Proficient, and Extending. Together, we will unpack Ministry definitions, challenge common secondary grading misconceptions, and calibrate our expectations of student learning to confidently assess continuous growth."}, {"slot": "9:45 am to 11 am", "title": "Crack the Code: Custom Desmos Activities for Beginners", "speakers": "Naoise Gallagher", "room": "Library", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "Can’t find the perfect Desmos activity? Build it yourself! A year ago, I was a Desmos coding beginner who just wanted my students to visualise how equations transform graphs. I wanted them to play with math at their own pace, from Math 8 linear functions to Pre-Calculus 12 periodic and logarithmic functions. In this session, I'll share how to skip the frustration and start building. Learn to link algebraic inputs to visual transformations and create \"Check my work\" features for instant student feedback. No prior coding experience required, just a love for seeing students connect the dots (and the parabolas!)."}, {"slot": "9:45 am to 11 am", "title": "What's the Story? Restorying Math Tasks for Thinking and Belonging", "speakers": "Judy Larsen", "room": "E103", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "How we launch a task shapes everything that follows: who engages, who belongs, who thinks. In this hands-on workshop, participants will be invited into a task that was restoried by teachers and implemented using Building Thinking Classrooms practices in a Grade 6-7 classroom. We will see how a reimagined launch facilitated engagement and created space for broader participation. Together we will explore how task framing and launch design shape student thinking and belonging. Participants will have opportunities to think about restorying tasks and consider launch designs that lead to effective student responsibility and collaboration. Prim Int Mid Sec"}, {"slot": "9:45 am to 11 am", "title": "From Fables to Figures: Connecting Storytelling, Culture, and Real-World Contexts in Mathematics", "speakers": "Anita Kumari", "room": "B210", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "This interactive workshop explores how storytelling can make mathematics meaningful and relevant for diverse learners. Grounded in classroom and community-based practice, participants will engage in hands-on activities using Panchatantra stories to teach concepts such as patterns, data analysis, problem-solving, and logical reasoning. The session also connects mathematics to real-world issues, including environmental sustainability, helping students analyze data and think critically about global challenges. Educators will gain practical strategies to integrate culture, storytelling, and real-world contexts into their mathematics teaching."}, {"slot": "9:45 am to 11 am", "title": "Math 9: From Emerging to Extending", "speakers": "Laura Epp", "room": "E203", "grades": ["Sec"], "tags": [], "desc": "Join this interactive session exploring practical strategies to support all learners. Discover how building mathematical vocabulary strengthens understanding, how daily warm-up routines activate prior knowledge and reduce cognitive load, and how Extend and Apply tasks push thinking beyond procedures. Grounded in classroom practice and aligned with the BC curriculum, this session focuses on creating engaging, inclusive math classrooms."}, {"slot": "9:45 am to 11 am", "title": "Calculus Resources with Purpose", "speakers": "Bruce McAskill", "room": "E204", "grades": ["Sec"], "tags": ["Exhibitor"], "desc": "Do you ever get tired of having to adapt university textbooks for use in your high school Calculus classes? We did, so we created our own, and now you can benefit from our experience! We partnered with Edvantage Interactive to create worktexts for the BC Calculus 12 and AP Calculus AB & BC curricula. Please join lead author, Dr. Bruce McAskill, as he takes you through the author’s journey of developing these worktexts. The workshop will focus on how the worktext has a purposeful design that aligns with the different curricula. This design includes how to use the online teacher guides, quizzes, and solutions."}, {"slot": "9:45 am to 11 am", "title": "Adapting Jo Boaler's \"Explorations in Data Science\" high school course for BC FOM 11", "speakers": "Gillian Bouska, Lee Fisher", "room": "E202", "grades": ["Sec"], "tags": [], "desc": "The YouCubed Explorations in Data Science course is prepared for high school students and is freely available online. By adapting these resources to deliver BC curricular competencies and content we can introduce FOM 11 students to the creative and ever more relevant field of data science. In this session expect to explore the online content of the first two units and see some ways it can be adapted for the BC classroom."}, {"slot": "11:15 am to 12:30 pm", "title": "1,500 Decisions. How Many Are Informed?", "speakers": "Mitch Doorey", "room": "Library", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": ["Exhibitor"], "desc": "A math teacher makes 1,500 instructional decisions a day. Most of them are made without actual insight into what each student is thinking. Magma Math captures every student's work on a digital canvas in real time, so teachers can spot misconceptions as they form, share student strategies anonymously, and turn individual work into a whole-class conversation. This session shows what shifts when teachers have that visibility — in student confidence, in classroom discourse, and in the outcomes! Prim Int Mid Sec"}, {"slot": "11:15 am to 12:30 pm", "title": "Unlocking K-4 Learning Progressions", "speakers": "Jennifer Dionne", "room": "B203", "grades": ["Prim"], "tags": [], "desc": "Participants will explore the Math K–4 Foundational Learning Progressions, focusing on how the progressions are structured and what proficiency looks like in practice. Through collaborative discussion, educators will unpack proficient descriptors and generate activities, lessons, and strategies to support student learning. This interactive session supports teachers in using the progressions as a practical tool for planning, assessment, and responsive instruction."}, {"slot": "11:15 am to 12:30 pm", "title": "Math Games", "speakers": "Mike Wong", "room": "B209", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "Engaging students in mathematics can make all the difference in how they see themselves as mathematicians. Games can provide that engagement and when planned with intention can provide opportunities for student discussion and explanation, fluency practice, problem solving and critical and creative thinking. This session will look at thoughtfully choosing and playing games with students to help build student agency and identity in mathematics."}, {"slot": "11:15 am to 12:30 pm", "title": "Designing Math That Is For Everyone", "speakers": "Carly Herman, Tyler Bruce", "room": "E206", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "This workshop offers a practical, hands-on approach to designing math lessons that are more inclusive and accessible for all learners. Through examining both a specific math lesson and its planning process, we’ll explore how strategies from the Universal Classroom Strategies Toolkit and Universal Design for Learning can support you in meeting diverse student needs in your math class."}, {"slot": "11:15 am to 12:30 pm", "title": "Developing and Supporting Additive Thinking across the grades", "speakers": "Erik Teather", "room": "E102", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "In this session we will do some activities from different grades and use a variety of models to represent and develop additive thinking. Our intentional choice of activities, games and math tools will help you to reflect about your students' additive thinking journey. Regardless of the grade you teach, becoming more aware of the tools and models that students encounter across the grades can help to support learners in your class. While the session is focused on the content of additive thinking, we will also spend time considering how to develop curricular competencies within this content for our students. This session is sponsored by Pearson."}, {"slot": "11:15 am to 12:30 pm", "title": "High Impact Math Instruction: Fostering Confidence and Creativity in a Diverse Intermediate Classroom.", "speakers": "Heidi Jungwirth", "room": "B200", "grades": ["Int"], "tags": ["Exhibitor"], "desc": "Are you interested in learning about sustainable teaching and assessment practises that transform your instruction? Address the needs of all your learners? Create successful confident students? Bring joy back to teaching? I am excited to share with you how we use powerful routines, formative feedback, hands-on materials, and intentional math talks to support all our students in becoming confident, capable mathematicians. With an emphasis on building a strong foundation in number sense, we base our work on the latest research in math education. Focus is on grades 3-5 Prim Int Mid Sec"}, {"slot": "11:15 am to 12:30 pm", "title": "Eco-mathematics: Hands-on Activities for People and the Planet", "speakers": "Jennifer Thom", "room": "E106", "grades": ["Int", "Mid"], "tags": [], "desc": "Discover memorable, hands-on activities that integrate math with age-appropriate geography and ecology to learn more about our human footprint on the Earth and its resources. Engage in mathematical modeling, simulations, games and collaborative problem-solving activities that connect students to the world around them. Build students’ understanding and skills in estimation, data gathering and analysis, algebraic patterns and functions, decimals, fractions and ratios, linear measurement, as well as problem solving. Receive lesson plans aligned with provincial learning standards."}, {"slot": "11:15 am to 12:30 pm", "title": "Integers: Drop the Rules; Work on Number Sense", "speakers": "Keith Van De Keere", "room": "B206", "grades": ["Int", "Mid"], "tags": ["Hybrid"], "desc": "How do your kids solve problems involving subtraction? If we resort to using tricks to solve subtraction problems, students may wrongly conclude that subtraction doesn’t work for integers. We will use contexts to help students see how integers can help us communicate ideas in our world. We will talk about:\n· Locating & navigating with integers on a number line\n· The concept and value of making zeros to solve addition, subtraction and multiplication problems.\n· Using Number strings to show a pattern to validate the shortcuts (tricks) we tend to just give students without investigating or understanding."}, {"slot": "11:15 am to 12:30 pm", "title": "Increasing Access to Challenging Mathematics - A Practical Framework for Diverse Classrooms", "speakers": "Rebekaah Stenner", "room": "E205", "grades": ["Int", "Mid"], "tags": [], "desc": "Many teachers work in classrooms where students are at vastly different stages in their mathematical development and where literacy, attention, and foundational skill gaps can create barriers to learning. This session explores a practical framework for designing mathematics instruction that increases accessibility and independence for a wide range of learners while maintaining mathematical rigour. This session is most suitable for Grades 4-6 teachers, or teachers of older students who are looking for intervention support."}, {"slot": "11:15 am to 12:30 pm", "title": "Aligning Practice with Purpose: The Power of Productive Struggle in Mathematics", "speakers": "Carmen Neacs", "room": "E108", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "This session explores how mathematics instruction and assessment can better reflect our core purpose as math teachers. If our goal is to develop deep understanding and independent thinkers, how well do our daily instructional and assessment practices align with that vision? Through the lens of productive struggle, participants will examine misalignments in both instruction and assessment and consider practical strategies to support student thinking without removing challenge. The session offers classroom activities and assessment approaches that bring practice into closer alignment with our values in mathematics learning."}, {"slot": "11:15 am to 12:30 pm", "title": "Teaching Democracy for Numeracy: Teaching Numeracy for Democracy", "speakers": "Dr. Michael MacKenzie, Dr. Paula Waatainen, Hannah Stehr-So", "room": "E207", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "In this interactive workshop, we’ll invite you to try out and give feedback on activities we are designing to build skills (e.g. tabulation, data interpretation, data visualization, and deliberation) and dispositions (e.g. tolerance for complexity, contingency and nuance) that are good for both democracy and numeracy. We welcome both intermediate and secondary teachers to come out to experience and discuss. Prim Int Mid Sec"}, {"slot": "11:15 am to 12:30 pm", "title": "Simulations in the mathematics classroom: acting out socio-mathematical issues", "speakers": "Katherina von Bülow, Sean Chorney", "room": "B207", "grades": ["Int", "Mid", "Sec"], "tags": ["Hybrid"], "desc": "In our work with socio-mathematical issues, we have developed a number of simulation activities in which students act out and reflect on such issues. We will engage in 2 or 3 simulation activities, such as: a physical graph of wealth inequality, a debate on greenhouse gas emission trends, and a role-play of voting apportionments. We will discuss the simulations and our experiences enacting them in classrooms, and explore their ties to curricular topics such as graphing, measurement, data literacy, and proportional thinking."}, {"slot": "11:15 am to 12:30 pm", "title": "From Classroom to Construction: Math Skills for the Trades", "speakers": "Vincent Nguyen, Kyle Andresen", "room": "E203", "grades": ["Int", "Mid", "Sec"], "tags": ["Exhibitor"], "desc": "Many students struggle with math because they don’t see its purpose. This session introduces SkillPlan’s Build Your Skills Learning Hub, a free online resource using real-world construction scenarios to teach fractions, measurement, geometry, and proportional reasoning. Developed with contractors, unions, instructors, and industry stakeholders across Canada, participants will explore sample lessons, examine challenges post-secondary learners face entering the trades, and discuss strategies for using contextualized math in Grades 6–11 classrooms, particularly Workplace Mathematics 10 and 11. Please bring a laptop or tablet."}, {"slot": "11:15 am to 12:30 pm", "title": "Math + Games = Joy", "speakers": "Stephanie Langille, Briana DeSantis", "room": "B210", "grades": ["Sec"], "tags": [], "desc": "Briana and Stephanie have been working together at Moscrop for 3 years to help each other find ways to engage kids in material that doesn't involve worksheets (even if they're just worksheets in disguise!). Our aim is to share our reasoning for this and any and all resources we have come up with so far!"}, {"slot": "11:15 am to 12:30 pm", "title": "Leveling Assessments", "speakers": "Lucas Guillen", "room": "B211", "grades": ["Sec"], "tags": [], "desc": "A discussion around making assessments look less like a test and more like achievements. This naturally creates a low flow and high ceiling that allows students to find some success at every learning level."}, {"slot": "11:15 am to 12:30 pm", "title": "Using GeoGebra to support learning math through curricular competencies", "speakers": "Lee Fisher", "room": "E202", "grades": ["Sec"], "tags": [], "desc": "Technology can allow us to draw student's attention towards explaining, reasoning and making connections. GeoGebra gives students the tools to interact with math creatively and to construct diagrams, both static and dynamic, related to functions or geometry. Since all numerical values are available through the technology, the student learning is in the construction and the reasoning and communication rather than 'the answer'. In this workshop we begin with GeoGebra as first time users, explore student work on projects and perhaps plan a project for an upcoming unit."}, {"slot": "11:15 am to 12:30 pm", "title": "Classroom Strategies for Motivating Young People", "speakers": "Roz Mullen", "room": "B204", "grades": ["Sec"], "tags": [], "desc": "Prim Int Mid Sec Based on David Yeager’s 2025 book 10 to 25: The Science of Motivating Young People, we will delve into practical strategies to motivate students and wait for it …..make teachers’ lives easier. Yeager challenges traditional approaches by emphasizing the importance of respect, autonomy, and purpose in fostering lasting engagement. How do we maintain high standards while providing the increasing supports that students require? How do we foster environments that reinforce students’ sense of competence and social status, rather than endless (and seemingly futile) growth mindset messaging that yields little to no improvement? Complete this form ahead of the session if you have specific questions and/or challenges that you would like to be addressed."}, {"slot": "11:15 am to 12:30 pm", "title": "What Worked For Me: Lesson Planning Strategies for Early Career Teachers", "speakers": "Julie Liu", "room": "E101", "grades": ["Sec"], "tags": [], "desc": "As a fourth-year teacher juggling five preps, including an AP class, I know how overwhelming lesson planning can be early in your career. In this session, I’ll share the strategies, tools, and mindsets that have helped me stay organized, save time, and plan effectively across multiple courses. Whether you're just starting or looking to streamline your process, you'll leave with practical ideas you can use right away."}, {"slot": "12:30 pm to 1:15 pm", "lunch": true}, {"slot": "1:15 pm to 2:30 pm", "title": "Thin-Slicing 101: A Deep Dive into the Heart of Building Thinking Classrooms", "speakers": "Peter Liljedahl", "room": "Auditorium", "grades": ["Prim", "Int", "Mid", "Sec"], "tags": [], "desc": "Thin-slicing is the Building Thinking Classroom (BTC) practice of sequencing tasks to maintain a balance between challenge and ability so as to give access for all learners while at the same time allowing us to cover large amounts of curricular content. Thin-Slicing is often seen as a mysterious part of Building BTC. In this session, I pull back the curtain on thin-slicing as I take a close look at this process. The practices discussed will intertwine with, and make extensive references to, the recently published book, Mathematics Tasks for the Thinking Classrooms (K-5 and 6-12)."}, {"slot": "1:15 pm to 2:30 pm", "title": "High Impact Math Instruction: Fostering Confidence and Creativity in a Diverse Primary Classroom.", "speakers": "Heidi Jungwirth", "room": "B200", "grades": ["Prim"], "tags": ["Exhibitor"], "desc": "Are you interested in learning about sustainable teaching and assessment practises that transform your instruction? Address the needs of all your learners? Create successful confident students? Bring joy back to teaching? I am excited to share with you how we use powerful routines, formative feedback, hands-on materials, and intentional math talks to support all our students in becoming confident, capable mathematicians. With an emphasis on building a strong foundation in number sense, we base our work on the latest research in math education. Focus is on grades K-2"}, {"slot": "1:15 pm to 2:30 pm", "title": "Elevating Numeracy through Play: Integrating Games and Social-Emotional Learning", "speakers": "Kendra Jacobs", "room": "B209", "grades": ["Prim", "Int"], "tags": [], "desc": "Prim Int Mid Sec Discover the power of combining social-emotional learning (SEL) with numeracy by incorporating games into your math classroom. Teachers will gain insights into effectively merging SEL principles with math games, using a math workshop structure. By the end of the session, educators will leave with a clear understanding of how to explicitly weave SEL teachings into math games, providing a holistic approach to student development. The workshop features a diverse array of games, ensuring that participants not only experience them firsthand but also leave with a collection of new games to enrich their classroom repertoire."}, {"slot": "1:15 pm to 2:30 pm", "title": "From Routines to Results: Building Math Fluency in Minutes a Day", "speakers": "Alyson Quan, Jacob Martens", "room": "B207", "grades": ["Prim", "Int", "Mid"], "tags": [], "desc": "What does effective math fact fluency learning look like in a busy classroom? How can it become a consistent, meaningful part of each day? Which routines build efficiency, flexibility, confidence (and fun) with numbers? Participants will explore classroom-tested fluency plans for Kindergarten to Grade 7, organized within a clear scope and sequence. These simple routines and games take just 5 to 10 minutes a day and can be used right away with materials you likely already have. Walk away ready to start on Monday."}, {"slot": "1:15 pm to 2:30 pm", "title": "Learning numbers, it’s not as easy as you think", "speakers": "Andy Psarianos", "room": "E103", "grades": ["Prim", "Int", "Mid"], "tags": ["Exhibitor"], "desc": "We often assume learning numbers is as natural as speaking, but the reality is far more complex. In this session, we peel back the layers of early numeracy to understand how children truly develop number sense. From one-to-one correspondence to place value and conservation, we’ll uncover the deep cognitive work young learners must master. You’ll see why rushing these steps can lead to years of anxiety and misunderstanding. We’ll also explore how sequenced teaching, rich tasks, and time for exploration make all the difference, leaving you with a renewed appreciation for why foundational number work deserves our focused attention."}, {"slot": "1:15 pm to 2:30 pm", "title": "Additive Thinking And Equality", "speakers": "Keith Van De Keere", "room": "B206", "grades": ["Prim", "Int", "Mid"], "tags": ["Hybrid"], "desc": "Our #1 goal is to foster development of number sense and mathematical thinking by talking about and showing math BIG IDEAS in action. First big hurdle: moving kids from counting to additive thinking. We want kids to see what math looks like and how it works to solve real life problems. We will talk about:\n· Counting vs. additive thinking\n· Four Important questions that need to be at the heart of every math lesson\n· Importance of working with partners and groups\n· Important uses of Open Number Lines\n· Adding and subtracting BIG IDEAS\n· Pairing up questions to help kids number relationships"}, {"slot": "1:15 pm to 2:30 pm", "title": "Developing and Supporting Proportional Thinking across the Grades", "speakers": "Erik Teather", "room": "E102", "grades": ["Int", "Mid"], "tags": [], "desc": "Prim Int Mid Sec In this session we will do some activities from different grades and use a variety of models to represent and develop proportional thinking. Our intentional choice of activities, games and math tools will help you to reflect about your students' proportional thinking journey. Regardless of the grade you teach, becoming more aware of the tools and models that students encounter across the grades can help to support learners in your class. While the session is focused on the content of proportional thinking, we will also spend time considering how to develop curricular competencies within this content for our students."}, {"slot": "1:15 pm to 2:30 pm", "title": "Students Won’t Think: Changing Classroom Systems to Build Mathematical Thinking", "speakers": "Deep Kaur", "room": "E108", "grades": ["Int", "Mid", "Sec"], "tags": [], "desc": "When students encounter a challenging problem, many immediately ask, “Can you just show the steps?” But what if the issue is not motivation, what if it’s the system? This session explores how principles of change management, often used to shift culture in organizations, can help transform mathematics classrooms. Through real classroom examples, we will examine how small structural shifts in routines, expectations, and assessment can move students from step-followers to thinkers. Walk away with practical strategies to build persistence, collaboration, and deeper mathematical reasoning."}, {"slot": "1:15 pm to 2:30 pm", "title": "Function Junction: Where Relationships, Representations, and Real-World Contexts Meet", "speakers": "Chris Hunter", "room": "E106", "grades": ["Sec"], "tags": [], "desc": "High school mathematics provides students with opportunities to deepen their understanding of linear relations and expand their “function repertoire\" to non-linear relationships. Through highly-engaging tasks, we’ll explore what features of familiar functions (e.g., linear, quadratic, exponential, trigonometric) are important, how these features appear in various representations (e.g., tables, graphs, equations, words), and how classes of functions model and make predictions about “real-world” phenomena. We’ll discuss characteristics of these tasks—what makes them “rich”—as well as effective “teacher moves” to enrich them."}, {"slot": "1:15 pm to 2:30 pm", "title": "The Mathematics of Tla'amin Nation Basket Weaving", "speakers": "Sheena Tan", "room": "B211", "grades": ["Sec"], "tags": [], "desc": "We will share resources developed in partnership with the Tla’amin Nation, focused on their basket weaving practice and the mathematical knowledge involved. These resources allow grades 8-12 teachers and students to understand the weaving process, from the harvesting of cedar roots to the weaving techniques and the shapes and designs of the baskets. These resources also incorporate ʔayʔajuθəm, language of the Tla’amin Nation, to highlight how language reflects their ways of thinking. Participants will have the chance to try these resources as students first before engaging in discussions about the connections to the BC mathematics curriculum."}, {"slot": "1:15 pm to 2:30 pm", "title": "LaTeX + AI - The Perfect Duo for High Quality STEM Documentation", "speakers": "Douglas Tam", "room": "Library", "grades": ["Sec"], "tags": [], "desc": "Tired of MS Word and Google Docs destroying your formatting every time you insert an equation or adjust a margin? This hands-on workshop introduces a frictionless workflow that pairs the typesetting power of LaTeX with the generative speed of AI. We will walk through a step-by-step process to instantly build flawlessly formatted, professional-grade math assessments, in a fraction of the time. Participants will receive access to my personal LaTeX templates and AI prompt structures. Please bring a laptop and an existing quiz you would like to instantly upgrade during our live build session."}];
+const SLOTS = [
+  {key:"8:30 am to 9:30 am", t:"8:30–9:30", lab:"Opening keynote"},
+  {key:"9:45 am to 11 am", t:"9:45–11:00", lab:"Block 1"},
+  {key:"11:15 am to 12:30 pm", t:"11:15–12:30", lab:"Block 2"},
+  {key:"12:30 pm to 1:15 pm", t:"12:30–1:15", lab:"Lunch", lunch:true},
+  {key:"1:15 pm to 2:30 pm", t:"1:15–2:30", lab:"Block 3"}
+];
+const G = ["Prim","Int","Mid","Sec"], GL = {Prim:"P",Int:"I",Mid:"M",Sec:"S"};
+DATA.forEach((s,i)=>{ s.id = "s"+i; });
+const sessions = DATA.filter(s=>!s.lunch);
+
+const store = {
+  get(k,d){ try{ const v = localStorage.getItem("mcp:"+k); return v==null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{ localStorage.setItem("mcp:"+k, JSON.stringify(v)); }catch(e){} }
+};
+const state = {
+  tab: store.get("tab","all"), view: store.get("view","compact"), q:"",
+  grades: new Set(store.get("grades",[])), hybrid: store.get("hybrid",false), noex: store.get("noex",false),
+  picks: store.get("picks",{}), open: null, more: false
+};
+// single-session slots are picked automatically
+SLOTS.forEach(sl=>{ const ss = sessions.filter(s=>s.slot===sl.key); if(ss.length===1) state.picks[sl.key]=ss[0].id; });
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function save(){ store.set("tab",state.tab); store.set("view",state.view); store.set("grades",[...state.grades]); store.set("hybrid",state.hybrid); store.set("noex",state.noex); store.set("picks",state.picks); }
+
+function matches(s){
+  if(state.grades.size && !s.grades.some(g=>state.grades.has(g))) return false;
+  if(state.hybrid && !s.tags.includes("Hybrid")) return false;
+  if(state.noex && s.tags.includes("Exhibitor")) return false;
+  if(state.q){ const hay=(s.title+" "+s.speakers+" "+s.room+" "+s.desc).toLowerCase(); if(!state.q.toLowerCase().split(/\s+/).every(w=>hay.includes(w))) return false; }
+  return true;
+}
+const pips = s => `<span class="pips" aria-label="Grades: ${s.grades.join(", ")}">${G.map(g=>`<span class="${s.grades.includes(g)?"on":""}">${GL[g]}</span>`).join("")}</span>`;
+const tags = s => s.tags.map(t=>`<span class="tag ${t.toLowerCase()}">${t}</span>`).join("");
+
+function card(s){
+  const full = state.view==="full", open = full || state.open===s.id, picked = state.picks[s.slot]===s.id;
+  return `<article class="card${picked?" picked":""}" id="${s.id}">
+    <button class="head" data-open="${s.id}" aria-expanded="${open}" ${full?'tabindex="-1"':""}>
+      <span class="title">${esc(s.title)}</span>
+      <span class="who">${esc(s.speakers)}</span>
+      <span class="meta">${pips(s)}<span class="room">${esc(s.room)}</span>${tags(s)}${full?"":`<span class="chev" aria-hidden="true">${open?"▲ less":"▼ more"}</span>`}</span>
+    </button>
+    <button class="star" data-pick="${s.id}" aria-pressed="${picked}" aria-label="${picked?"Remove from":"Add to"} My Day">${picked?"★":"☆"}</button>
+    <div class="desc"${open?"":" hidden"}>${esc(s.desc)}</div>
+  </article>`;
+}
+
+function renderAll(){
+  let html=""; let any=false;
+  for(const sl of SLOTS){
+    if(sl.lunch){ html+=`<section class="slot"><div class="ruler"><span class="t">${sl.t}</span><span class="lab">Lunch</span></div></section>`; continue; }
+    const all = sessions.filter(s=>s.slot===sl.key), shown = all.filter(matches);
+    if(shown.length) any=true;
+    const pick = state.picks[sl.key];
+    html+=`<section class="slot" id="slot-${SLOTS.indexOf(sl)}"><div class="ruler"><span class="t">${sl.t}</span><span class="lab">${sl.lab}</span>${pick?`<span class="mine">★ picked</span>`:""}<span class="n">${shown.length===all.length?all.length+" sessions":shown.length+" of "+all.length}</span></div>
+      <div class="list">${shown.length? shown.map(card).join("") : `<div class="empty">No sessions in this block match your filters.</div>`}</div></section>`;
+  }
+  $("main").innerHTML = html;
+}
+
+function renderDay(){
+  let html=`<div class="day"><div class="list">`;
+  SLOTS.forEach((sl,i)=>{
+    if(sl.lunch){ html+=`<div class="slotcard"><div class="row2"><span class="big" style="color:var(--muted)">${sl.t}</span><span class="lab">Lunch</span></div></div>`; return; }
+    const s = sessions.find(x=>x.id===state.picks[sl.key]);
+    html+= s ? `<div class="slotcard set"><div class="row2"><span class="big">${sl.t}</span><span class="room" style="font-size:.85rem">${esc(s.room)}</span>${tags(s)}</div>
+        <div class="title">${esc(s.title)}</div><div class="who">${esc(s.speakers)}</div>
+        <div class="row2"><button class="linkbtn" data-goto="${s.id}">Details</button>${sessions.filter(x=>x.slot===sl.key).length>1?`<button class="linkbtn" data-unpick="${sl.key}">Remove</button>`:""}</div></div>`
+      : `<div class="slotcard"><div class="row2"><span class="big" style="color:var(--muted)">${sl.t}</span><span class="lab">${sl.lab}</span></div>
+        <div class="todo">Nothing picked yet.</div><div><button class="linkbtn" data-choose="${i}">Choose a session →</button></div></div>`;
+  });
+  $("main").innerHTML = html+`</div></div>`;
+}
+
+function render(){
+  $("tab-all").setAttribute("aria-pressed", state.tab==="all");
+  $("tab-day").setAttribute("aria-pressed", state.tab==="day");
+  $("v-compact").setAttribute("aria-pressed", state.view==="compact");
+  $("v-full").setAttribute("aria-pressed", state.view==="full");
+  const onDay = state.tab==="day";
+  $("viewseg").hidden = onDay; $("filters").hidden = onDay; $("more").hidden = onDay || !state.more;
+  $("more-btn").setAttribute("aria-expanded", state.more);
+  const extra = (state.hybrid?1:0)+(state.noex?1:0);
+  $("more-n").hidden = !extra; $("more-n").textContent = extra;
+  document.querySelectorAll("[data-g]").forEach(b=>b.setAttribute("aria-pressed", state.grades.has(b.dataset.g)));
+  $("f-hybrid").setAttribute("aria-pressed", state.hybrid);
+  $("f-noex").setAttribute("aria-pressed", state.noex);
+  $("clear").hidden = !(state.grades.size||state.hybrid||state.noex||state.q);
+  const n = SLOTS.filter(sl=>!sl.lunch && state.picks[sl.key]).length;
+  $("daycount").textContent = n+"/4";
+  onDay ? renderDay() : renderAll();
+  save(); measure();
+}
+
+function measure(){ document.documentElement.style.setProperty("--bar-h", $("bar").offsetHeight+"px"); }
+try{ new ResizeObserver(measure).observe($("bar")); }catch(e){ addEventListener("resize",measure); }
+
+function scrollToEl(el){ if(!el) return; const y = el.getBoundingClientRect().top + scrollY - $("bar").offsetHeight - 50; scrollTo({top:y, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"}); }
+
+$("main").addEventListener("click", e=>{
+  const o = e.target.closest("[data-open]"), p = e.target.closest("[data-pick]"),
+        g = e.target.closest("[data-goto]"), u = e.target.closest("[data-unpick]"), c = e.target.closest("[data-choose]");
+  if(p){ const s = sessions.find(x=>x.id===p.dataset.pick);
+    if(state.picks[s.slot]===s.id){ if(sessions.filter(x=>x.slot===s.slot).length>1) delete state.picks[s.slot]; }
+    else state.picks[s.slot]=s.id;
+    render(); return; }
+  if(o && state.view==="compact"){ const id=o.dataset.open; state.open = state.open===id?null:id; render(); if(state.open) scrollToEl($(id)); return; }
+  if(g){ state.tab="all"; state.open=g.dataset.goto; render(); scrollToEl($(g.dataset.goto)); return; }
+  if(u){ delete state.picks[u.dataset.unpick]; render(); return; }
+  if(c){ state.tab="all"; render(); scrollToEl($("slot-"+c.dataset.choose)); return; }
+});
+$("tab-all").onclick=()=>{state.tab="all";render();};
+$("tab-day").onclick=()=>{state.tab="day";render();scrollTo(0,0);};
+$("v-compact").onclick=()=>{state.view="compact";render();};
+$("v-full").onclick=()=>{state.view="full";state.open=null;render();};
+document.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{ const g=b.dataset.g; state.grades.has(g)?state.grades.delete(g):state.grades.add(g); render(); });
+$("more-btn").onclick=()=>{state.more=!state.more;render();};
+$("f-hybrid").onclick=()=>{state.hybrid=!state.hybrid;render();};
+$("f-noex").onclick=()=>{state.noex=!state.noex;render();};
+$("clear").onclick=()=>{state.grades.clear();state.hybrid=false;state.noex=false;state.q="";$("q").value="";render();};
+let t; $("q").addEventListener("input", e=>{ clearTimeout(t); t=setTimeout(()=>{ state.q=e.target.value.trim(); render(); },120); });
+render();
+</script>
+
+</body>
+</html>
